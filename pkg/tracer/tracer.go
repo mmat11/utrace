@@ -54,10 +54,9 @@ func New(c *config.Config) (*Tracer, error) {
 			continue
 		}
 
-		fmt.Printf("attaching %s\n", s)
 		cookie := uint64(i)
 
-		up, err := ex.Uprobe(s, objs.UprobeGeneric, &link.UprobeOptions{PID: c.Pid}) //, Cookie: cookie})
+		up, err := ex.Uprobe(s, objs.UprobeGeneric, &link.UprobeOptions{PID: c.Pid, BpfCookie: cookie})
 		if err != nil {
 			fmt.Printf("could not attach uprobe to symbol %s: %v\n", s, err)
 			continue
