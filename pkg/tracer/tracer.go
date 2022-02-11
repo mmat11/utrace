@@ -19,6 +19,13 @@ type Tracer struct {
 	refs map[uint64]string
 }
 
+func (t *Tracer) Close() {
+	fmt.Println("detaching uprobes")
+	for _, u := range t.uprobes {
+		u.Close()
+	}
+}
+
 //go:generate go run github.com/cilium/ebpf/cmd/bpf2go bpf ../../bpf/utrace.c
 
 func New(c *config.Config) (*Tracer, error) {
@@ -62,15 +69,16 @@ func New(c *config.Config) (*Tracer, error) {
 			continue
 		}
 
+		// Go binaries will crash!
 		// https://github.com/golang/go/issues/22008
-		// urp, err := ex.Uretprobe(s, objs.UretprobeGeneric, &link.UprobeOptions{PID: c.Pid})
-		// if err != nil {
-		//     fmt.Printf("could not attach uretprobe to symbol %s: %v\n", s, err)
-		//     continue
-		// }
+		urp, err := ex.Uretprobe(s, objs.UretprobeGeneric, &link.UprobeOptions{PID: c.Pid})
+		if err != nil {
+			fmt.Printf("could not attach uretprobe to symbol %s: %v\n", s, err)
+			continue
+		}
 
 		t.uprobes = append(t.uprobes, up)
-		// t.uprobes = append(t.uprobes, urp)
+		t.uprobes = append(t.uprobes, urp)
 		t.refs[cookie] = s
 	}
 
@@ -93,16 +101,10 @@ func (t *Tracer) Record() error {
 			continue
 		}
 
-		if err := ev.UnmarshalBinary(record.RawSample); err != nil {
+		if err := ev.UnmarshalBinary(t, record.RawSample); err != nil {
 			return fmt.Errorf("unmarshal event: %w", err)
 		}
 
-		sym, ok := t.refs[ev.Cookie]
-		if !ok {
-			fmt.Printf("sym for cookie %d not found\n", ev.Cookie)
-			continue
-		}
-
-		fmt.Println(sym, ev.Kind, ev.PidTgid, ev.Ts)
+		fmt.Println(ev.String())
 	}
 }

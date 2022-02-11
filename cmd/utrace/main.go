@@ -51,6 +51,7 @@ func main() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	defer t.Close()
 
 	go func() {
 		if err := t.Record(); err != nil {
