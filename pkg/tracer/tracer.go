@@ -63,7 +63,11 @@ func New(c *config.Config) (*Tracer, error) {
 
 		cookie := uint64(i)
 
-		up, err := ex.Uprobe(s, objs.UprobeGeneric, &link.UprobeOptions{PID: c.Pid, BpfCookie: cookie})
+		up, err := ex.Uprobe(
+			s,
+			objs.UprobeGeneric,
+			&link.UprobeOptions{PID: c.Pid, BpfCookie: cookie},
+		)
 		if err != nil {
 			fmt.Printf("could not attach uprobe to symbol %s: %v\n", s, err)
 			continue
@@ -71,7 +75,11 @@ func New(c *config.Config) (*Tracer, error) {
 
 		// Go binaries will crash!
 		// https://github.com/golang/go/issues/22008
-		urp, err := ex.Uretprobe(s, objs.UretprobeGeneric, &link.UprobeOptions{PID: c.Pid})
+		urp, err := ex.Uretprobe(
+			s,
+			objs.UretprobeGeneric,
+			&link.UprobeOptions{PID: c.Pid, BpfCookie: cookie},
+		)
 		if err != nil {
 			fmt.Printf("could not attach uretprobe to symbol %s: %v\n", s, err)
 			continue
