@@ -34,3 +34,4 @@ func traceme(a, b, c int) asdf {
 
 `go run ./cmd/utrace -executable /home/matt/misc/traceme/tracee -filter 'dump.|main.'`
 
+![Screenshot from 2022-02-15 14-02-07](https://user-images.githubusercontent.com/9884419/154067367-df9fc084-8c00-4eae-8a2a-d63613146a5b.png)
