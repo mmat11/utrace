@@ -6,37 +6,40 @@ import (
 	"fmt"
 )
 
-func Symbols(ex string) ([]string, error) {
-	syms := make([]string, 0)
+type Sym struct {
+	Name  string
+	Value uint64
+}
+
+func Symbols(ex string) ([]Sym, error) {
+	ss := make([]Sym, 0)
 
 	f, err := elf.Open(ex)
 	if err != nil {
-		return syms, fmt.Errorf("open elf: %w", err)
+		return nil, fmt.Errorf("open elf: %w", err)
 	}
 
-	load := func(ss []elf.Symbol) {
-		for _, s := range ss {
-			if elf.ST_TYPE(s.Info) != elf.STT_FUNC {
-				continue
-			}
-			if s.Value == 0 {
-				continue
-			}
-			syms = append(syms, s.Name)
+	syms, err := f.Symbols()
+	if err != nil && !errors.Is(err, elf.ErrNoSymbols) {
+		return nil, err
+	}
+
+	dynsyms, err := f.DynamicSymbols()
+	if err != nil && !errors.Is(err, elf.ErrNoSymbols) {
+		return nil, err
+	}
+
+	syms = append(syms, dynsyms...)
+
+	for _, s := range syms {
+		if elf.ST_TYPE(s.Info) != elf.STT_FUNC {
+			continue
 		}
+		if s.Value == 0 {
+			continue
+		}
+		ss = append(ss, Sym{s.Name, s.Value})
 	}
 
-	ss, err := f.Symbols()
-	if err != nil && !errors.Is(err, elf.ErrNoSymbols) {
-		return syms, fmt.Errorf("load symbols: %w", err)
-	}
-	load(ss)
-
-	dss, err := f.DynamicSymbols()
-	if err != nil && !errors.Is(err, elf.ErrNoSymbols) {
-		return syms, fmt.Errorf("load dynamic symbols: %w", err)
-	}
-	load(dss)
-
-	return syms, nil
+	return ss, nil
 }

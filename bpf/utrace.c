@@ -1,59 +1,60 @@
-#include "vmlinux_compact.h"
+#include "vmlinux.h"
 #include "bpf_helpers.h"
+//#include "bpf_tracing.h"
+
+#define PERF_MAX_STACK_DEPTH 127 
 
 struct {
     __uint(type, BPF_MAP_TYPE_RINGBUF);
-    __uint(max_entries, 256 * 1024);
+    __uint(max_entries, 65536 * 8 * 1024);  // 552M
 } ringbuf SEC(".maps");
 
-/*
-struct {
-    __uint(type, BPF_MAP_TYPE_ARRAY);
-    __type(key, u32);
-    __type(value, u32);
-    __uint(max_entries, 65535);
-} calls SEC(".maps");*/
-
 enum ev_kind {
-    EV_KIND_ENTRY = 1,
-    EV_KIND_EXIT = 2,
+    EV_KIND_ENTER,
+    EV_KIND_EXIT,
 };
 
 struct event {
     enum ev_kind kind;
-    u64 pid_tgid;
-    u64 ts;
+    u32 pid;
     u64 cookie;
-    //u32 calls;
+    u64 ns;
+    u64 stack[PERF_MAX_STACK_DEPTH];
 } __attribute__((packed));
 
-static void emit_event(enum ev_kind kind, u64 cookie) {
+static int trace_generic(struct pt_regs *ctx, enum ev_kind kind) {
     struct event *ev = bpf_ringbuf_reserve(&ringbuf, sizeof(*ev), 0);
     if (!ev) {
         bpf_printk("ringbuf reserve failed");
-        return;
+        return 0;
     }
 
-    ev->pid_tgid = bpf_get_current_pid_tgid();
-    ev->ts = bpf_ktime_get_ns();
     ev->kind = kind;
-    ev->cookie = cookie;
+    ev->pid = bpf_get_current_pid_tgid();
+    ev->cookie = bpf_get_attach_cookie(ctx);
+    ev->ns = bpf_ktime_get_boot_ns();
+    int err = bpf_get_stack(
+        ctx,
+        ev->stack,
+        sizeof(u64) * PERF_MAX_STACK_DEPTH,
+        BPF_F_USER_STACK);
+    if (err < 0) {
+        bpf_printk("stack not available");
+    }
 
     bpf_ringbuf_submit(ev, 0);
+
+    return 0;
 }
 
 SEC("uprobe/generic")
 int uprobe_generic(struct pt_regs *ctx) {
-    u64 cookie = bpf_get_attach_cookie(ctx);
-    emit_event(EV_KIND_ENTRY, cookie);
-    return 0;
+    return trace_generic(ctx, EV_KIND_ENTER);
 }
 
 SEC("uretprobe/generic")
 int uretprobe_generic(struct pt_regs *ctx) {
-    u64 cookie = bpf_get_attach_cookie(ctx);
-    emit_event(EV_KIND_EXIT, cookie);
-    return 0;
+    return trace_generic(ctx, EV_KIND_EXIT);
 }
 
 char LICENSE[] SEC("license") = "Dual MIT/GPL";

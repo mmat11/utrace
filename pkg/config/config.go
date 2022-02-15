@@ -9,6 +9,7 @@ import (
 type Config struct {
 	Executable string
 	Pid        int
+	SkipRet    bool
 	Filter     *regexp.Regexp
 }
 
@@ -20,13 +21,4 @@ func (c *Config) Validate() error {
 		c.Executable = fmt.Sprintf("/proc/%d/exe", c.Pid)
 	}
 	return nil
-}
-
-func (c *Config) String() string {
-	return fmt.Sprintf(
-		"Executable\t%s\nFilter\t\t%s\nPid\t\t%d\n",
-		c.Executable,
-		c.Filter.String(),
-		c.Pid,
-	)
 }
