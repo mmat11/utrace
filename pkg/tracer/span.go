@@ -1,27 +1,21 @@
 package tracer
 
-import (
-	"encoding/json"
-)
+import "fmt"
 
 type span struct {
 	Name     string  `json:"name"`
 	Value    uint64  `json:"value"`
-	Children []*span `json:"children"`
+	Children []*span `json:"children,omitempty"`
 	depth    uint32
 	start    uint64
 	end      uint64
 	isClosed bool
 }
 
-func (s *span) String() string {
-	b, _ := json.Marshal(s)
-	return string(b)
-}
-
 func newSpan(depth uint32, sym string, start uint64) *span {
 	return &span{
 		Name:     sym,
+		Value:    0,
 		Children: make([]*span, 0),
 		depth:    depth,
 		start:    start,
@@ -42,12 +36,12 @@ func (root *span) enter(sym string, start uint64) {
 	root.Children = append(root.Children, ns)
 }
 
-type state struct {
+type exitState struct {
 	found bool
 	depth uint32
 }
 
-func (root *span) exit(sym string, end uint64, st *state) {
+func (root *span) exit(sym string, end uint64, st *exitState) {
 	if st.found {
 		return
 	}
@@ -66,5 +60,30 @@ func (root *span) exit(sym string, end uint64, st *state) {
 		root.isClosed = true
 		st.found = true
 		st.depth = root.depth
+	}
+}
+
+func (root *span) refresh() {
+	root.Value = 0
+	for _, s := range root.Children {
+		if !s.isClosed {
+			continue
+		}
+
+		root.Value += s.Value
+	}
+}
+
+func (root *span) Print() {
+	nest := ""
+	for i := uint32(0); i < root.depth; i++ {
+		nest += "  "
+	}
+	fmt.Printf(
+		"%s%s[usec=%d, closed=%v]\n", nest, root.Name, root.Value, root.isClosed,
+	)
+
+	for _, s := range root.Children {
+		s.Print()
 	}
 }

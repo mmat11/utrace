@@ -95,13 +95,12 @@
 
 
     // Example on how to use custom tooltips using d3-tip.
-    // var tip = d3.tip()
-    //   .direction("s")
-    //   .offset([8, 0])
-    //   .attr('class', 'd3-flame-graph-tip')
-    //   .html(function(d) { return "name: " + d.data.name + ", value: " + d.data.value; });
-
-    // flameGraph.tooltip(tip);
+    var tip = d3.tip()
+      .direction("s")
+      .offset([8, 0])
+      .attr('class', 'd3-flame-graph-tip')
+      .html(function(d) { return "function: " + d.data.name + ", microseconds: " + d.data.value; });
+    flameGraph.tooltip(tip);
 
     var details = document.getElementById("details");
     flameGraph.setDetailsElement(details);

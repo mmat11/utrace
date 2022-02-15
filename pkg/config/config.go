@@ -9,7 +9,6 @@ import (
 type Config struct {
 	Executable string
 	Pid        int
-	SkipRet    bool
 	Filter     *regexp.Regexp
 }
 
