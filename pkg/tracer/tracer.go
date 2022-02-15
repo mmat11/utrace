@@ -25,7 +25,7 @@ type Tracer struct {
 func (t *Tracer) Close() {
 	t.ringbuf.Close()
 
-	fmt.Println("detaching uprobes")
+	fmt.Printf("detaching uprobes")
 	for i, u := range t.uprobes {
 		if i%100 == 0 {
 			fmt.Print(".")
@@ -69,14 +69,21 @@ func New(c *config.Config) (*Tracer, error) {
 			Children: make([]*span, 0),
 		},
 	}
+
+	fmt.Printf("attaching uprobes\n")
 	for i, s := range syms {
-		t.syms[s.Value] = s.Name
+		cookie := uint64(i)
+		t.refs[cookie] = s.Name
+		t.syms[s.Enter] = s.Name
 
 		if c.Filter != nil && !c.Filter.MatchString(s.Name) {
 			continue
 		}
 
-		cookie := uint64(i)
+		if len(s.Exit) == 1 && s.Enter == s.Exit[0] {
+			fmt.Printf("skipping 1 insn symbol %s\n", s.Name)
+			continue
+		}
 
 		up, err := ex.Uprobe(
 			s.Name,
@@ -89,24 +96,19 @@ func New(c *config.Config) (*Tracer, error) {
 		}
 
 		t.uprobes = append(t.uprobes, up)
-		t.refs[cookie] = s.Name
 
-		if c.SkipRet {
-			continue
+		for _, off := range s.Exit {
+			urp, err := ex.Uprobe(
+				s.Name,
+				objs.UretprobeGeneric,
+				&link.UprobeOptions{PID: c.Pid, Offset: off, BpfCookie: cookie},
+			)
+			if err != nil {
+				fmt.Printf("could not attach uprobe to symbol RET address %s(%#x): %v\n", s.Name, off, err)
+				continue
+			}
+			t.uprobes = append(t.uprobes, urp)
 		}
-		// Go binaries will crash!
-		// https://github.com/golang/go/issues/22008
-		urp, err := ex.Uretprobe(
-			s.Name,
-			objs.UretprobeGeneric,
-			&link.UprobeOptions{PID: c.Pid, BpfCookie: cookie},
-		)
-		if err != nil {
-			fmt.Printf("could not attach uretprobe to symbol %s: %v\n", s.Name, err)
-			continue
-		}
-
-		t.uprobes = append(t.uprobes, urp)
 	}
 
 	fmt.Printf("attached %d uprobes\n", len(t.uprobes))
@@ -130,24 +132,23 @@ func (t *Tracer) Record() error {
 			return fmt.Errorf("unmarshal event: %w", err)
 		}
 
-		switch ev.Kind {
-		case "ENTER":
-			t.Root.enter(ev.Symbol, ev.Ns)
-		case "EXIT":
-			st := state{}
-			t.Root.exit(ev.Symbol, ev.Ns, &st)
-			if !st.found {
-				// ???
-				fmt.Println("no enter event found for", ev.Symbol)
-				continue
-			}
-			if st.depth == 1 {
-				t.Root.Value = 0
-				for _, c := range t.Root.Children {
-					t.Root.Value += c.Value
-				}
-				fmt.Println(t.Root.String())
-			}
+		t.consume(ev)
+	}
+}
+
+func (t *Tracer) consume(ev *Event) {
+	switch ev.Kind {
+	case EventKindEnter:
+		t.Root.enter(ev.Symbol, ev.Usec)
+	case EventKindExit:
+		st := exitState{}
+		t.Root.exit(ev.Symbol, ev.Usec, &st)
+		if !st.found {
+			fmt.Printf("received exit event (%s) but no span to close?!\n", ev.Symbol)
+			return
+		}
+		if st.depth == 1 {
+			t.Root.refresh()
 		}
 	}
 }

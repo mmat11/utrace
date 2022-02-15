@@ -2,19 +2,16 @@
 
 TODO: readme
 
+ulimit -n 50000
 
 ```
 package main
 
 import (
-	"fmt"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 )
-
-func init() {
-	fmt.Println("INIT")
-}
 
 type asdf struct {
 	a, b, c int
@@ -23,12 +20,16 @@ type asdf struct {
 func main() {
 	a := traceme(1, 2, 3)
 	spew.Dump(a)
-	fmt.Println("DONE")
 }
 
-//go:noinline
 func traceme(a, b, c int) asdf {
-	return asdf{a, b, c}
+	time.Sleep(50 * time.Microsecond)
+	abc := asdf{a, b, c}
+	spew.Dump(abc)
+	abc.a = 13
+	abc.b = 3
+	abc.c = 7
+	return abc
 }
 ```
 

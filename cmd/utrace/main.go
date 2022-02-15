@@ -13,6 +13,7 @@ import (
 	"syscall"
 
 	"github.com/cilium/ebpf/rlimit"
+
 	"github.com/mmat11/utrace/pkg/config"
 	"github.com/mmat11/utrace/pkg/tracer"
 )
@@ -27,7 +28,6 @@ func main() {
 	c := new(config.Config)
 	flag.StringVar(&c.Executable, "executable", "", "Path of the executable to trace.")
 	flag.IntVar(&c.Pid, "pid", 0, "Pid of the process.")
-	flag.BoolVar(&c.SkipRet, "skip-ret", false, "Skip return probes.")
 	flag.Func("filter", "Function filter. Supports regex.", func(r string) error {
 		re, err := regexp.Compile(r)
 		if err != nil {
