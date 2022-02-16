@@ -81,7 +81,7 @@ int uprobe_generic(struct pt_regs *ctx) {
     //      * TODO: mark this event as not precise.
     //      */
     //     bpf_printk("emitting exit event for enter (%d)", *cnt);
-    //     trace_generic(ctx, EV_KIND_EXIT, 10);
+    //     trace_generic(ctx, EV_KIND_EXIT);
     //     __sync_fetch_and_add(cnt, -1);
     // }
 
