@@ -6,7 +6,7 @@ TODO: readme
 
 ```
 ~ ulimit -n 50000
-~ go run ./cmd/utrace -executable /home/matt/misc/traceme/tracee -filter 'dump.|main.
+~ go run ./cmd/utrace -executable /home/matt/misc/traceme/tracee -filter 'dump.|main.'
 
 package main
 
