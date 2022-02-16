@@ -2,9 +2,12 @@
 
 TODO: readme
 
-ulimit -n 50000
+![Screenshot from 2022-02-16 20-27-47](https://user-images.githubusercontent.com/9884419/154341732-d8e1b746-4922-4bd9-b813-4b7b5f1cbf73.png)
 
 ```
+~ ulimit -n 50000
+~ go run ./cmd/utrace -executable /home/matt/misc/traceme/tracee -filter 'dump.|main.
+
 package main
 
 import (
@@ -32,7 +35,3 @@ func traceme(a, b, c int) asdf {
 	return abc
 }
 ```
-
-`go run ./cmd/utrace -executable /home/matt/misc/traceme/tracee -filter 'dump.|main.'`
-
-![Screenshot from 2022-02-15 14-02-07](https://user-images.githubusercontent.com/9884419/154067367-df9fc084-8c00-4eae-8a2a-d63613146a5b.png)
