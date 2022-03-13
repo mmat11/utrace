@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"strings"
 	"syscall"
 
 	"github.com/cilium/ebpf/rlimit"
@@ -68,10 +69,11 @@ func main() {
 		os.Exit(1)
 	}
 	http.HandleFunc("/", handleIndex(tp))
+	http.HandleFunc("/debug", handleDebug(t))
 	http.HandleFunc("/data.json", handleData(t))
 
 	go func() {
-		fmt.Println("listening on :3000")
+		fmt.Println("listening on http://localhost:3000")
 		http.ListenAndServe(":3000", nil)
 	}()
 
@@ -82,6 +84,15 @@ func handleIndex(tp *template.Template) func(http.ResponseWriter, *http.Request)
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		tp.Execute(w, nil)
+	}
+}
+
+func handleDebug(t *tracer.Tracer) func(http.ResponseWriter, *http.Request) {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		s := strings.Builder{}
+		t.Root.Repr(&s)
+		w.Write([]byte(s.String()))
 	}
 }
 

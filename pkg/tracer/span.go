@@ -1,6 +1,9 @@
 package tracer
 
-import "fmt"
+import (
+	"fmt"
+	"strings"
+)
 
 type span struct {
 	Name     string  `json:"name"`
@@ -74,16 +77,22 @@ func (root *span) refresh() {
 	}
 }
 
-func (root *span) Print() {
+func (root *span) Repr(st *strings.Builder) {
 	nest := ""
 	for i := uint32(0); i < root.depth; i++ {
-		nest += "  "
+		nest += "\t"
 	}
-	fmt.Printf(
-		"%s%s[usec=%d, closed=%v]\n", nest, root.Name, root.Value, root.isClosed,
+
+	_, err := st.WriteString(
+		fmt.Sprintf(
+			"%s%s[usec=%d, closed=%v]\n", nest, root.Name, root.Value, root.isClosed,
+		),
 	)
+	if err != nil {
+		panic(err)
+	}
 
 	for _, s := range root.Children {
-		s.Print()
+		s.Repr(st)
 	}
 }
