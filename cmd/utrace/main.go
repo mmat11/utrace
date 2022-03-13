@@ -71,7 +71,7 @@ func main() {
 	http.HandleFunc("/data.json", handleData(t))
 
 	go func() {
-		fmt.Println("listening on http://0.0.0.0:3000")
+		fmt.Println("listening on :3000")
 		http.ListenAndServe(":3000", nil)
 	}()
 
