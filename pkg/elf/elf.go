@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"go/build"
+	"os"
 	"os/exec"
 	"path"
 	"regexp"
@@ -46,17 +47,6 @@ func Symbols(ex string) ([]Sym, error) {
 
 	syms = append(syms, dynsyms...)
 
-	// data, err := f.Section(".text").Data()
-	// if err != nil {
-	// 	return ss, err
-	// }
-	//
-	// eng, err := gapstone.New(gapstone.CS_ARCH_X86, gapstone.CS_MODE_64)
-	// if err != nil {
-	// 	return ss, err
-	// }
-	// defer eng.Close()
-
 	rets, err := readRets(f, ex)
 	if err != nil {
 		return ss, err
@@ -76,21 +66,10 @@ func Symbols(ex string) ([]Sym, error) {
 			Exit:  make([]uint64, 0),
 		}
 
-		// insns, err := eng.Disasm(data, addrToOffset(f, s.Value), s.Size)
-		// if err != nil {
-		// 	return ss, err
-		// }
-		//
-		// for _, insn := range insns {
-		// 	// fmt.Printf("%#x %s %s\n", insn.Address, insn.Mnemonic, insn.OpStr)
-		// 	if insn.Mnemonic == "ret" {
-		// 		sym.Exit = append(sym.Exit, uint64(insn.Address))
-		// 	}
-		// }
-
 		offs, ok := rets[s.Name]
 		if !ok {
-			fmt.Printf("WARNING: %s RET address not found\n", s.Name)
+			fmt.Printf("WARNING: %s RET address not found - skipping\n", s.Name)
+			continue
 		}
 		sym.Exit = append(sym.Exit, offs...)
 
@@ -118,9 +97,9 @@ func readRets(f *elf.File, ex string) (map[string][]uint64, error) {
 	r := make(map[string][]uint64, 0)
 
 	// TODO: this is ugly and slow, find a better way
-	out, err := exec.Command(
-		path.Join(build.Default.GOROOT, "bin/go"), "tool", "objdump", ex,
-	).Output()
+	cmd := exec.Command(path.Join(build.Default.GOROOT, "bin/go"), "tool", "objdump", ex)
+	cmd.Stderr = os.Stderr
+	out, err := cmd.Output()
 	if err != nil {
 		return r, err
 	}

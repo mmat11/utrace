@@ -88,7 +88,7 @@ func New(c *config.Config) (*Tracer, error) {
 		up, err := ex.Uprobe(
 			s.Name,
 			objs.UprobeGeneric,
-			&link.UprobeOptions{PID: c.Pid, BpfCookie: cookie},
+			&link.UprobeOptions{PID: c.Pid, Cookie: cookie},
 		)
 		if err != nil {
 			fmt.Printf("could not attach uprobe to symbol %s: %v\n", s.Name, err)
@@ -101,7 +101,7 @@ func New(c *config.Config) (*Tracer, error) {
 			urp, err := ex.Uprobe(
 				s.Name,
 				objs.UretprobeGeneric,
-				&link.UprobeOptions{PID: c.Pid, Offset: off, BpfCookie: cookie},
+				&link.UprobeOptions{PID: c.Pid, Offset: off, Cookie: cookie},
 			)
 			if err != nil {
 				fmt.Printf("could not attach uprobe to symbol RET address %s(%#x): %v\n", s.Name, off, err)
